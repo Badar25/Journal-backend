@@ -158,3 +158,9 @@ All API responses follow this structure:
     "error": string | null
 }
 ``` 
+## 🧪 Testing
+
+Run tests using pytest:
+```bash
+pytest tests -v
+```
