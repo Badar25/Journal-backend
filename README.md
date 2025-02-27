@@ -1,6 +1,3 @@
-Based on the comprehensive codebase review, I'll create a detailed README.md file for your Journal AI FastAPI backend project.
-
-```markdown:/Users/bahadur/Downloads/Interview/journal-backend-fastapi/README.md
 # Journal AI Backend
 
 A FastAPI-based backend service that provides AI-enhanced journaling capabilities with semantic search, summarization, and interactive chat features.
@@ -65,7 +62,7 @@ GEMINI_API_KEY=<your_gemini_api_key>
 
 1. Clone the repository
 ```bash
-git clone <repository-url>
+git clone https://github.com/Badar25/Journal-backend
 ```
 
 2. Install dependencies
@@ -160,24 +157,4 @@ All API responses follow this structure:
     "data": object | null,
     "error": string | null
 }
-```
-
-## 🧪 Testing
-
-Run tests using pytest:
-```bash
-pytest
-```
-
-## 📝 License
-
-[Add your license here]
-
-## 👥 Contributing
-
-1. Fork the repository
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
 ``` 
