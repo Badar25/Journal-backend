@@ -2,6 +2,12 @@
 
 A FastAPI-based backend service that provides AI-enhanced journaling capabilities with semantic search, summarization, and interactive chat features.
 
+## ⚡ Tech Stack
+-	FastAPI - High-performance Python backend
+-	Google Gemini LLM - AI-driven journal insights
+-	Qdrant + SentenceTransformers - Vector search for context retrieval
+-	Versioning + Testing - Scalable API
+
 ## 🚀 Features
 
 - Journal entry creation and management
