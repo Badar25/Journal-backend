@@ -4,7 +4,7 @@ from .core.firebase import AuthError
 from .models.response import APIResponse
 from fastapi.responses import JSONResponse
 
-app = FastAPI(title="Journal AI App", version="0.1.0")
+app = FastAPI(title="Journal AI App", version="1.0.0")
 
 @app.exception_handler(AuthError)
 async def auth_error_handler(request: Request, exc: AuthError):
