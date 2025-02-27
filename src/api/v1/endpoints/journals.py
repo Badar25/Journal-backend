@@ -163,22 +163,3 @@ async def delete_journal(journal_id: str, user_id: str = Depends(get_current_use
     return APIResponse.success_response(
         message="Journal deleted successfully"
     )
-
-@router.post("/chat", response_model=APIResponse)
-async def chat_with_journals(chat: ChatRequest, user_id: str = Depends(get_current_user)):
-    logger.info(f"Processing chat request for user: {user_id}")
-    search_response = qdrant_service.search_journals(chat.message, user_id)
-    
-    context, error_response = JournalTextExtractor.process_journals_response(search_response, "relevant journals")
-    if error_response:
-        return error_response
-    
-    response = gemini_service.generate_response(chat.message, context)
-    if not response.success:
-        return response
-        
-    logger.info(f"Chat response generated successfully for user: {user_id}")
-    return APIResponse.success_response(
-        data={"response": response.data.get("response", "")},
-        message="Chat response generated successfully"
-    )
