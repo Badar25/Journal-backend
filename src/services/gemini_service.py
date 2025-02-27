@@ -2,6 +2,7 @@ import google.generativeai as genai
 from fastapi import HTTPException
 from ..core.config import settings
 from ..models.response import APIResponse
+from ..core.prompt_templates import prompt_templates
 
 class GeminiServiceError(Exception):
     """Base exception for GeminiService errors"""
@@ -28,7 +29,7 @@ class GeminiService:
             )
 
         try:
-            prompt = f"Based on this context from my journals: '{context}', answer this: '{query}'"
+            prompt = prompt_templates.get_chat_prompt(context, query)
             response = self.model.generate_content(prompt)
             
             if not response or not response.text:

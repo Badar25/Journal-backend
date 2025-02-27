@@ -23,6 +23,12 @@ except Exception as e:
     logger.error(f"Failed to initialize Firebase: {str(e)}")
     raise RuntimeError(f"Firebase initialization failed: {str(e)}")
 
+class AuthError(Exception):
+    def __init__(self, error: str, message: str):
+        self.error = error
+        self.message = message
+        super().__init__(message)
+
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
     try:
@@ -30,29 +36,25 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         return decoded_token["uid"]
     except auth.ExpiredIdTokenError:
         logger.warning("Expired authentication token")
-        return APIResponse.error_response(
+        raise AuthError(
             error="TOKEN_EXPIRED",
-            message="Authentication token has expired",
-            status_code=status.HTTP_401_UNAUTHORIZED
+            message="Authentication token has expired"
         )
     except auth.RevokedIdTokenError:
         logger.warning("Revoked authentication token")
-        return APIResponse.error_response(
+        raise AuthError(
             error="TOKEN_REVOKED",
-            message="Authentication token has been revoked",
-            status_code=status.HTTP_401_UNAUTHORIZED
+            message="Authentication token has been revoked"
         )
     except auth.InvalidIdTokenError:
         logger.warning("Invalid authentication token")
-        return APIResponse.error_response(
+        raise AuthError(
             error="TOKEN_INVALID",
-            message="Invalid authentication token",
-            status_code=status.HTTP_401_UNAUTHORIZED
+            message="Invalid authentication token"
         )
     except Exception as e:
         logger.error(f"Authentication error: {str(e)}")
-        return APIResponse.error_response(
+        raise AuthError(
             error="AUTH_ERROR",
-            message="Authentication failed",
-            status_code=status.HTTP_401_UNAUTHORIZED
+            message="Authentication failed"
         )

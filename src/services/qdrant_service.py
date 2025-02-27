@@ -174,6 +174,10 @@ class QdrantService:
                 )
 
             query_vector = self.generate_embedding(query)
+            # Check if embedding generation failed (if so, return the http resp)
+            if isinstance(query_vector, APIResponse):  
+                return query_vector
+
             filter = Filter(must=[FieldCondition(key="userId", match=MatchValue(value=user_id))])
             results = self.client.search(
                 self.collection_name,
@@ -182,7 +186,17 @@ class QdrantService:
                 limit=limit,
                 with_payload=True
             )
-            journals = [{"id": r.id, **r.payload} for r in results]
+            journals = []
+            for result in results:
+                journal_data = {
+                    "id": result.id,
+                    "content": result.payload.get("content", ""),
+                    "title": result.payload.get("title", ""),
+                    "userId": result.payload.get("userId", ""),
+                    "createdAt": result.payload.get("createdAt", "")
+                }
+                journals.append(journal_data)
+
             return APIResponse.success_response(
                 data={"journals": journals},
                 message="Search completed successfully"
