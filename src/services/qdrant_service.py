@@ -52,10 +52,18 @@ class QdrantService:
 
     def upsert_journal(self, journal_id: str, user_id: str, title: str, content: str):
         try:
-            if not all([journal_id, user_id, title, content]):
+            # Check required fields
+            if not journal_id or not user_id:
                 return APIResponse.error_response(
                     error="MISSING_FIELDS",
-                    message="Missing required fields"
+                    message="Journal ID and User ID are required"
+                )
+            
+            # Check that at least one of title or content is present
+            if not title and not content:
+                return APIResponse.error_response(
+                    error="MISSING_CONTENT",
+                    message="Either title or content must be provided"
                 )
 
             if len(content.split()) > 999:
@@ -63,7 +71,7 @@ class QdrantService:
                     error="CONTENT_TOO_LONG",
                     message="Content exceeds 999 words"
                 )
-
+            
             vector = self.generate_embedding(content)
             created_at = datetime.now().timestamp()
             point = PointStruct(
@@ -206,6 +214,29 @@ class QdrantService:
             return APIResponse.error_response(
                 error="SEARCH_ERROR",
                 message="Failed to search journals"
+            )
+
+    def delete_journals_by_user(self, user_id: str):
+        try:
+            if not user_id:
+                return APIResponse.error_response(
+                    error="MISSING_USER_ID",
+                    message="User ID is required"
+                )
+
+            filter = Filter(must=[FieldCondition(key="userId", match=MatchValue(value=user_id))])
+            self.client.delete(
+                collection_name=self.collection_name,
+                points_selector=filter
+            )
+            return APIResponse.success_response(
+                message="All journals for the user deleted successfully"
+            )
+        except Exception as e:
+            logger.error(f"Failed to delete journals for user {user_id}: {str(e)}")
+            return APIResponse.error_response(
+                error="DELETE_ERROR",
+                message="Failed to delete user journals"
             )
 
 qdrant_service = QdrantService()

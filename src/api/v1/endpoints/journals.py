@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from ....services.qdrant_service import qdrant_service
 from ....services.gemini_service import gemini_service
-from ....core.firebase import get_current_user
+from ....core.firebase import get_current_user, firebase_admin
 from ....models.response import APIResponse
 from ....models.journal import JournalCreate, JournalUpdate, JournalResponse
 from ....core.logger import logger
@@ -10,13 +10,13 @@ from pydantic import BaseModel
 from ....utils.journal_extractor import JournalTextExtractor
 from ....utils.journal_validator import JournalValidator
 from ....core.prompt_templates import prompt_templates
- 
+
 router = APIRouter()
 
 class ChatRequest(BaseModel):
     message: str
 
-@router.post("/", response_model=APIResponse)
+@router.post("", response_model=APIResponse) 
 async def create_journal(journal: JournalCreate, user_id: str = Depends(get_current_user)):
     logger.info(f"Creating new journal for user: {user_id}")
     
@@ -75,8 +75,19 @@ async def update_journal(journal_id: str, update: JournalUpdate, user_id: str = 
 @router.get("/", response_model=APIResponse)
 async def get_journals(user_id: str = Depends(get_current_user), days: int = None):
     logger.info(f"Fetching journals for user: {user_id}")
-    journals = qdrant_service.get_journals_by_user(user_id, days=days)
-    return APIResponse.success_response(data={"journals": journals})
+    response = qdrant_service.get_journals_by_user(user_id, days=days)
+    
+    if not response.success:
+        return APIResponse.error_response(
+            error=response.error,
+            message=response.message
+        )
+     
+    journals = response.data.get("journals", [])
+    return APIResponse.success_response(
+        data=journals,
+        message="Journals retrieved successfully"
+    )
 
 @router.get("/summary", response_model=APIResponse)
 async def get_summary(user_id: str = Depends(get_current_user), days: int = 7):
@@ -117,49 +128,64 @@ async def chat_with_journals(chat: ChatRequest, user_id: str = Depends(get_curre
         message="Chat response generated successfully"
     )
 
-
-@router.put("/{journal_id}", response_model=APIResponse)
-async def update_journal(journal_id: str, update: JournalUpdate, user_id: str = Depends(get_current_user)):
-    logger.info(f"Updating journal {journal_id} for user: {user_id}")
-    current = qdrant_service.get_journal(journal_id)
-    if not current:
-        return APIResponse.error_response(
-            error="Journal not found",
-            message=f"No journal found with ID: {journal_id}"
-        )
-    if current["userId"] != user_id:
-        return APIResponse.error_response(
-            error="Unauthorized",
-            message="Not authorized to update this journal"
-        )
-    qdrant_service.upsert_journal(
-        journal_id,
-        user_id,
-        update.title if update.title is not None else current["title"],
-        update.content if update.content is not None else current["content"]
-    )
-    logger.info(f"Journal {journal_id} updated successfully")
-    return APIResponse.success_response(
-        data={"id": journal_id},
-        message="Journal updated successfully"
-    )
-
 @router.delete("/{journal_id}", response_model=APIResponse)
 async def delete_journal(journal_id: str, user_id: str = Depends(get_current_user)):
     logger.info(f"Deleting journal {journal_id} for user: {user_id}")
     current = qdrant_service.get_journal(journal_id)
+    
+    if isinstance(current, APIResponse):
+        if not current.success:
+            return current
+        current = current.data
+    
     if not current:
         return APIResponse.error_response(
             error="Journal not found",
             message=f"No journal found with ID: {journal_id}"
         )
-    if current["userId"] != user_id:
+    
+    if current.get("userId") != user_id:
         return APIResponse.error_response(
             error="Unauthorized",
-            message="Not authorized to delete this journal"
+            message="You don't have permission to delete this journal"
         )
-    qdrant_service.delete_journal(journal_id)
-    logger.info(f"Journal {journal_id} deleted successfully")
-    return APIResponse.success_response(
-        message="Journal deleted successfully"
-    )
+    
+    result = qdrant_service.delete_journal(journal_id)
+    if result.success:
+        return APIResponse.success_response(
+            data={"id": journal_id},
+            message="Journal deleted successfully"
+        )
+    return result
+
+@router.delete("/user/all", response_model=APIResponse)
+async def delete_user_data(user_id: str = Depends(get_current_user)):
+    """Delete all user data including journals and authentication"""
+    logger.info(f"Deleting all data for user: {user_id}")
+    
+    try:
+        # Delete all journals from Qdrant
+        journals_deletion = qdrant_service.delete_journals_by_user(user_id)
+        if not journals_deletion.success:
+            return journals_deletion
+
+        # Delete user from Firebase Authentication
+        try:
+            firebase_admin.auth.delete_user(user_id)
+        except Exception as e:
+            logger.error(f"Failed to delete Firebase user: {str(e)}")
+            return APIResponse.error_response(
+                error="AUTH_DELETE_ERROR",
+                message="Failed to delete user authentication data"
+            )
+
+        return APIResponse.success_response(
+            message="User data deleted successfully"
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to delete user data: {str(e)}")
+        return APIResponse.error_response(
+            error="DELETE_ERROR",
+            message="Failed to delete user data"
+        )
