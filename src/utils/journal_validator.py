@@ -1,11 +1,11 @@
-from typing import Optional, Tuple
+from typing import Optional
 from ..models.response import APIResponse
 from ..models.journal import JournalCreate, JournalUpdate
 from ..core.logger import logger
 
 class JournalValidator:
     MAX_TITLE_LENGTH = 200
-    MAX_CONTENT_WORDS = 999
+    MAX_CONTENT_LENGTH = 1000 
     
     @staticmethod
     def validate_create(journal: JournalCreate, user_id: str) -> Optional[APIResponse]:
@@ -26,10 +26,10 @@ class JournalValidator:
             )
         
         # Content length validation
-        if journal.content and len(journal.content.split()) > JournalValidator.MAX_CONTENT_WORDS:
+        if journal.content and len(journal.content) > JournalValidator.MAX_CONTENT_LENGTH:
             return APIResponse.error_response(
                 error="CONTENT_TOO_LONG",
-                message=f"Content must not exceed {JournalValidator.MAX_CONTENT_WORDS} words"
+                message=f"Content must not exceed {JournalValidator.MAX_CONTENT_LENGTH} characters"
             )
         
         return None
@@ -43,10 +43,10 @@ class JournalValidator:
                 message=f"Title must not exceed {JournalValidator.MAX_TITLE_LENGTH} characters"
             )
         
-        if update.content is not None and len(update.content.split()) > JournalValidator.MAX_CONTENT_WORDS:
+        if update.content is not None and len(update.content) > JournalValidator.MAX_CONTENT_LENGTH:
             return APIResponse.error_response(
                 error="CONTENT_TOO_LONG",
-                message=f"Content must not exceed {JournalValidator.MAX_CONTENT_WORDS} words"
+                message=f"Content must not exceed {JournalValidator.MAX_CONTENT_LENGTH} characters"
             )
         
         return None
