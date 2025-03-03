@@ -65,12 +65,7 @@ class QdrantService:
                     error="MISSING_CONTENT",
                     message="Either title or content must be provided"
                 )
-
-            if len(content.split()) > 999:
-                return APIResponse.error_response(
-                    error="CONTENT_TOO_LONG",
-                    message="Content exceeds 999 words"
-                )
+ 
             
             vector = self.generate_embedding(content)
             created_at = datetime.now().timestamp()
